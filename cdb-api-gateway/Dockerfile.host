@@ -1,0 +1,11 @@
+ARG RUNTIME_IMAGE=eclipse-temurin:21-jre
+
+FROM ${RUNTIME_IMAGE}
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0" \
+    TZ=UTC \
+    SPRING_PROFILES_ACTIVE=default
+WORKDIR /app
+# Expect app.jar to be built on host and present in target/
+COPY target/app.jar /app/app.jar
+EXPOSE 8080
+ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar /app/app.jar"]

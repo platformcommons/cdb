@@ -1,0 +1,200 @@
+# Docker Compose for CDB Platform backend services
+#
+# This compose file defines the core backend microservices and a shared network named `cdb`.
+# It exposes the API Gateway and Auth Registry ports to the host. For each service, you can
+# override configuration via environment variables that correspond to placeholders from
+# the respective Spring Boot application.yml files.
+#
+# Usage:
+# - Ensure Docker and Docker Compose are installed.
+# - Use the provided run.sh (in the same directory) to build images and start services:
+#     ./run.sh
+# - Or manually:
+#     # Build images via Maven buildpacks (recommended)
+#     mvn -DskipTests -pl cdb-provider-registry -am spring-boot:build-image \
+#         && mvn -DskipTests -pl cdb-api-registry -am spring-boot:build-image \
+#         && mvn -DskipTests -pl cdb-auth-registry -am spring-boot:build-image \
+#         && mvn -DskipTests -pl cdb-api-gateway -am spring-boot:build-image \
+#         && mvn -DskipTests -pl cdb-master-data-engine -am spring-boot:build-image
+#     # Then start compose in detached mode
+#     docker compose up -d
+#
+# Notes:
+# - Logs: Each service writes logs into /var/log/cdb inside the container. We mount a host
+#   directory (./logs) to persist logs per service.
+# - Resources: CPU/Memory limits are expressed under deploy.resources.limits. Docker Compose will
+#   ignore deploy in standalone mode, but it documents intended limits and will be honored by Swarm.
+# - JWT Keys: Provide PEM values via environment variables for production. Dev default keys are
+#   embedded. For production, set CDB_SECURITY_JWT_RSA_PUBLIC_KEY for all services and
+#   CDB_SECURITY_JWT_RSA_PRIVATE_KEY only for the Auth service. Optionally set CDB_SECURITY_JWT_KID.
+# - Network: All services join the `cdb` bridge network.
+
+name: cdb-backend
+
+services:
+  cdb-api-gateway:
+    image: cdb/cdb-api-gateway:1.0.0
+    container_name: cdb-api-gateway
+    restart: unless-stopped
+    ports:
+      # Expose the gateway port to the host. Default maps 8080->8080
+      - "8080:8080"
+    environment:
+      # Server and app naming
+      CDB_API_GATEWAY_PORT: ${CDB_API_GATEWAY_PORT-8080}
+      CDB_API_GATEWAY_NAME: ${CDB_API_GATEWAY_NAME-cdb-api-gateway}
+      # Discovery/gateway toggles
+      CDB_GATEWAY_DISCOVERY_ENABLED: ${CDB_GATEWAY_DISCOVERY_ENABLED-true}
+      # Rate limiting
+      CDB_GATEWAY_RATE_LIMITING_ENABLED: ${CDB_GATEWAY_RATE_LIMITING_ENABLED-true}
+      CDB_GATEWAY_RATE_LIMIT: ${CDB_GATEWAY_RATE_LIMIT-100}
+      # Logging to a mounted directory
+      CDB_GATEWAY_ROOT_LOG_LEVEL: ${CDB_GATEWAY_ROOT_LOG_LEVEL-INFO}
+      CDB_GATEWAY_LOG_PATTERN: ${CDB_GATEWAY_LOG_PATTERN-%d{yyyy-MM-dd HH:mm:ss} - %msg%n}
+      CDB_GATEWAY_LOG_FILE_PATTERN: ${CDB_GATEWAY_LOG_FILE_PATTERN-%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n}
+      CDB_GATEWAY_LOG_FILE: ${CDB_GATEWAY_LOG_FILE-/var/log/cdb/cdb-api-gateway/cdb-api-gateway.log}
+      CDB_GATEWAY_LOG_MAX_FILE_SIZE: ${CDB_GATEWAY_LOG_MAX_FILE_SIZE-10MB}
+      CDB_GATEWAY_LOG_MAX_HISTORY: ${CDB_GATEWAY_LOG_MAX_HISTORY-30}
+      CDB_GATEWAY_LOG_TOTAL_SIZE_CAP: ${CDB_GATEWAY_LOG_TOTAL_SIZE_CAP-1GB}
+      # JWT public key typically needed by gateway for validation (optional here; dev has defaults)
+      CDB_SECURITY_JWT_RSA_PUBLIC_KEY: ${CDB_SECURITY_JWT_RSA_PUBLIC_KEY-}
+      CDB_SECURITY_JWT_KID: ${CDB_SECURITY_JWT_KID-}
+    volumes:
+      # Persist logs for gateway
+      - ./logs/cdb-api-gateway:/var/log/cdb/cdb-api-gateway
+    extra_hosts:
+      - "localhost:host-gateway"
+    networks:
+      - cdb
+    deploy:
+      resources:
+        limits:
+          # Intended resource limits (effective in Swarm)
+          cpus: 1.0
+          memory: 900M
+
+  cdb-auth-registry:
+    image: cdb/cdb-auth-registry:1.0.0
+    container_name: cdb-auth-registry
+    restart: unless-stopped
+    ports:
+      # Expose the auth registry port to the host. Default maps 8083->8083
+      - "8083:8083"
+    environment:
+      # Server and app name
+      CDB_AUTH_REGISTRY_PORT: ${CDB_AUTH_REGISTRY_PORT-8083}
+      CDB_AUTH_REGISTRY_NAME: ${CDB_AUTH_REGISTRY_NAME-cdb-auth-registry}
+      # Database connectivity (MySQL assumed by defaults)
+      CDB_AUTH_REGISTRY_DB_URL: ${CDB_DB_URL-jdbc:mysql://${CDB_DB_HOST-localhost}:${CDB_DB_PORT-3306}/cdb_auth_registry_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+      CDB_AUTH_REGISTRY_DB_USERNAME: ${CDB_AUTH_REGISTRY_DB_USERNAME-${CDB_DB_USERNAME-root}}
+      CDB_AUTH_REGISTRY_DB_PASSWORD: ${CDB_AUTH_REGISTRY_DB_PASSWORD-${CDB_DB_PASSWORD-root}}
+      CDB_AUTH_REGISTRY_DB_DRIVER: ${CDB_AUTH_REGISTRY_DB_DRIVER-${CDB_DB_DRIVER-com.mysql.cj.jdbc.Driver}}
+      CDB_AUTH_REGISTRY_JPA_DDL_AUTO: ${CDB_AUTH_REGISTRY_JPA_DDL_AUTO-none}
+      # Logging
+      CDB_AUTH_REGISTRY_ROOT_LOG_LEVEL: ${CDB_AUTH_REGISTRY_ROOT_LOG_LEVEL-INFO}
+      CDB_AUTH_REGISTRY_LOG_PATTERN: ${CDB_AUTH_REGISTRY_LOG_PATTERN-%d{yyyy-MM-dd HH:mm:ss} - %msg%n}
+      CDB_AUTH_REGISTRY_LOG_FILE_PATTERN: ${CDB_AUTH_REGISTRY_LOG_FILE_PATTERN-%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n}
+      CDB_AUTH_REGISTRY_LOG_FILE: ${CDB_AUTH_REGISTRY_LOG_FILE-/var/log/cdb/cdb-auth-registry/cdb-auth-registry.log}
+      CDB_AUTH_REGISTRY_LOG_MAX_FILE_SIZE: ${CDB_AUTH_REGISTRY_LOG_MAX_FILE_SIZE-10MB}
+      CDB_AUTH_REGISTRY_LOG_MAX_HISTORY: ${CDB_AUTH_REGISTRY_LOG_MAX_HISTORY-30}
+      CDB_AUTH_REGISTRY_LOG_TOTAL_SIZE_CAP: ${CDB_AUTH_REGISTRY_LOG_TOTAL_SIZE_CAP-1GB}
+      # TTLs for access/refresh
+      CDB_AUTH_JWT_ACCESS_TTL: ${CDB_AUTH_JWT_ACCESS_TTL-86400}
+      CDB_AUTH_JWT_REFRESH_TTL: ${CDB_AUTH_JWT_REFRESH_TTL-864000}
+      # JWT keys: issuer requires private+public; provide via env for production
+      CDB_SECURITY_JWT_RSA_PRIVATE_KEY: ${CDB_SECURITY_JWT_RSA_PRIVATE_KEY-}
+      CDB_SECURITY_JWT_RSA_PUBLIC_KEY: ${CDB_SECURITY_JWT_RSA_PUBLIC_KEY-}
+      CDB_SECURITY_JWT_KID: ${CDB_SECURITY_JWT_KID-}
+    volumes:
+      - ./logs/cdb-auth-registry:/var/log/cdb/cdb-auth-registry
+    networks:
+      - cdb
+    deploy:
+      resources:
+        limits:
+          cpus: 1.0
+          memory: 900M
+
+  cdb-api-registry:
+    image: cdb/cdb-api-registry:1.0.0
+    container_name: cdb-api-registry
+    restart: unless-stopped
+    environment:
+      # Server and app name
+      CDB_API_REGISTRY_PORT: ${CDB_API_REGISTRY_PORT-8082}
+      CDB_API_REGISTRY_NAME: ${CDB_API_REGISTRY_NAME-cdb-api-registry}
+      # Database
+      CDB_API_REGISTRY_DB_URL: ${CDB_DB_URL-jdbc:mysql://${CDB_DB_HOST-localhost}:${CDB_DB_PORT-3306}/cdb_api_registry_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+      CDB_API_REGISTRY_DB_USERNAME: ${CDB_API_REGISTRY_DB_USERNAME-${CDB_DB_USERNAME-root}}
+      CDB_API_REGISTRY_DB_PASSWORD: ${CDB_API_REGISTRY_DB_PASSWORD-${CDB_DB_PASSWORD-root}}
+      CDB_API_REGISTRY_DB_DRIVER: ${CDB_API_REGISTRY_DB_DRIVER-${CDB_DB_DRIVER-com.mysql.cj.jdbc.Driver}}
+      CDB_API_REGISTRY_JPA_DDL_AUTO: ${CDB_API_REGISTRY_JPA_DDL_AUTO-none}
+      # Logging
+      CDB_API_REGISTRY_ROOT_LOG_LEVEL: ${CDB_API_REGISTRY_ROOT_LOG_LEVEL-INFO}
+      CDB_API_REGISTRY_LOG_PATTERN: ${CDB_API_REGISTRY_LOG_PATTERN-%d{yyyy-MM-dd HH:mm:ss} - %msg%n}
+      CDB_API_REGISTRY_LOG_FILE_PATTERN: ${CDB_API_REGISTRY_LOG_FILE_PATTERN-%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n}
+      CDB_API_REGISTRY_LOG_FILE: ${CDB_API_REGISTRY_LOG_FILE-/var/log/cdb/cdb-api-registry/cdb-api-registry.log}
+      CDB_API_REGISTRY_LOG_MAX_FILE_SIZE: ${CDB_API_REGISTRY_LOG_MAX_FILE_SIZE-10MB}
+      CDB_API_REGISTRY_LOG_MAX_HISTORY: ${CDB_API_REGISTRY_LOG_MAX_HISTORY-30}
+      CDB_API_REGISTRY_LOG_TOTAL_SIZE_CAP: ${CDB_API_REGISTRY_LOG_TOTAL_SIZE_CAP-1GB}
+      # JWT public key for validation (optional in dev)
+      CDB_SECURITY_JWT_RSA_PUBLIC_KEY: ${CDB_SECURITY_JWT_RSA_PUBLIC_KEY-}
+      CDB_SECURITY_JWT_KID: ${CDB_SECURITY_JWT_KID-}
+    volumes:
+      - ./logs/cdb-api-registry:/var/log/cdb/cdb-api-registry
+    extra_hosts:
+      - "localhost:host-gateway"
+    networks:
+      - cdb
+    deploy:
+      resources:
+        limits:
+          cpus: 1.0
+          memory: 900M
+
+  cdb-provider-registry:
+    image: cdb/cdb-provider-registry:1.0.0
+    container_name: cdb-provider-registry
+    restart: unless-stopped
+    environment:
+      # Server and app name
+      CDB_PROVIDER_REGISTRY_PORT: ${CDB_PROVIDER_REGISTRY_PORT-8081}
+      CDB_PROVIDER_REGISTRY_NAME: ${CDB_PROVIDER_REGISTRY_NAME-cdb-provider-registry}
+      # Database
+      CDB_PROVIDER_REGISTRY_DB_URL: ${CDB_DB_URL-jdbc:mysql://${CDB_DB_HOST-localhost}:${CDB_DB_PORT-3306}/cdb_provider_registry_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+      CDB_PROVIDER_REGISTRY_DB_USERNAME: ${CDB_PROVIDER_REGISTRY_DB_USERNAME-${CDB_DB_USERNAME-root}}
+      CDB_PROVIDER_REGISTRY_DB_PASSWORD: ${CDB_PROVIDER_REGISTRY_DB_PASSWORD-${CDB_DB_PASSWORD-root}}
+      CDB_PROVIDER_REGISTRY_DB_DRIVER: ${CDB_PROVIDER_REGISTRY_DB_DRIVER-${CDB_DB_DRIVER-com.mysql.cj.jdbc.Driver}}
+      CDB_PROVIDER_REGISTRY_JPA_DDL_AUTO: ${CDB_PROVIDER_REGISTRY_JPA_DDL_AUTO-none}
+      CDB_PROVIDER_REGISTRY_JPA_SHOW_SQL: ${CDB_PROVIDER_REGISTRY_JPA_SHOW_SQL-false}
+
+      # Points provider registry to auth-registry base URL (internal service name used on network)
+      CDB_AUTH_REGISTRY_BASE_URL: ${CDB_AUTH_REGISTRY_BASE_URL-http://cdb-auth-registry:8083}
+      # Logging
+      CDB_PROVIDER_REGISTRY_ROOT_LOG_LEVEL: ${CDB_PROVIDER_REGISTRY_ROOT_LOG_LEVEL-INFO}
+      CDB_PROVIDER_LOG_PATTERN: ${CDB_PROVIDER_LOG_PATTERN-%d{yyyy-MM-dd HH:mm:ss} - %msg%n}
+      CDB_PROVIDER_LOG_FILE_PATTERN: ${CDB_PROVIDER_LOG_FILE_PATTERN-%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n}
+      CDB_PROVIDER_REGISTRY_LOG_FILE: ${CDB_PROVIDER_REGISTRY_LOG_FILE-/var/log/cdb/cdb-provider-registry/cdb-provider-registry.log}
+      CDB_PROVIDER_REGISTRY_LOG_MAX_FILE_SIZE: ${CDB_PROVIDER_REGISTRY_LOG_MAX_FILE_SIZE-10MB}
+      CDB_PROVIDER_REGISTRY_LOG_MAX_HISTORY: ${CDB_PROVIDER_REGISTRY_LOG_MAX_HISTORY-30}
+      CDB_PROVIDER_REGISTRY_LOG_TOTAL_SIZE_CAP: ${CDB_PROVIDER_REGISTRY_LOG_TOTAL_SIZE_CAP-1GB}
+      # JWT public key for validation (optional in dev)
+      CDB_SECURITY_JWT_RSA_PUBLIC_KEY: ${CDB_SECURITY_JWT_RSA_PUBLIC_KEY-}
+      CDB_SECURITY_JWT_KID: ${CDB_SECURITY_JWT_KID-}
+    volumes:
+      - ./logs/cdb-provider-registry:/var/log/cdb/cdb-provider-registry
+    extra_hosts:
+      - "localhost:host-gateway"
+    networks:
+      - cdb
+    depends_on:
+      - cdb-auth-registry
+    deploy:
+      resources:
+        limits:
+          cpus: 1.0
+          memory: 900M
+networks:
+  cdb:
+    name: cdb
+    driver: bridge

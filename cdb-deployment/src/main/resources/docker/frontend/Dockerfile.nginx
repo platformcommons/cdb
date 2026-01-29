@@ -1,0 +1,21 @@
+FROM nginx:alpine
+
+# Copy custom nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Create directories for static files
+RUN mkdir -p /usr/share/nginx/html/api-registry
+RUN mkdir -p /usr/share/nginx/html/provider-registry
+
+# Copy built React apps
+COPY api-registry-ui/ /usr/share/nginx/html/api-registry/
+COPY provider-registry-ui/ /usr/share/nginx/html/provider-registry/
+
+# Create SSL certificate directory
+RUN mkdir -p /etc/nginx/ssl
+COPY ssl/cert.pem /etc/nginx/ssl/cert.pem
+COPY ssl/key.pem /etc/nginx/ssl/key.pem
+
+EXPOSE 80 443
+
+CMD ["nginx", "-g", "daemon off;"]

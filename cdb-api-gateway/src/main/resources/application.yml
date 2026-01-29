@@ -1,0 +1,86 @@
+server:
+  port: ${CDB_API_GATEWAY_PORT:8080}
+
+spring:
+  application:
+    name: ${CDB_API_GATEWAY_NAME:cdb-api-gateway}
+  main:
+    web-application-type: reactive
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+    discovery:
+      client:
+        simple:
+          instances:
+            cdb-provider-registry:
+              - uri: ${CDB_PROVIDER_REGISTRY_URL:http://cdb-provider-registry:8081}
+            cdb-api-registry:
+              - uri: ${CDB_API_REGISTRY_URL:http://cdb-api-registry:8082}
+            cdb-auth-registry:
+              - uri: ${CDB_AUTH_REGISTRY_URL:http://cdb-auth-registry:8083}
+            cdb-master-data-engine:
+              - uri: ${CDB_MASTER_DATA_ENGINE_URL:http://cdb-master-data-engine:8084}
+
+      routes:
+        # New unified service prefixes for the React UI to call through a single base URL
+        - id: cdb-provider-registry
+          uri: lb://cdb-provider-registry
+          predicates:
+            - Path=/cdb-provider-registry/**
+          filters:
+            - StripPrefix=1
+        - id: cdb-provider-registry-compat
+          uri: lb://cdb-provider-registry
+          predicates:
+            - Path=/api/v1/providers/**
+          filters:
+            - StripPrefix=0
+        - id: cdb-api-registry
+          uri: lb://cdb-api-registry
+          predicates:
+            - Path=/cdb-api-registry/**
+          filters:
+            - StripPrefix=1
+        - id: cdb-auth-registry
+          uri: lb://cdb-auth-registry
+          predicates:
+            - Path=/cdb-auth-registry/**
+          filters:
+            - StripPrefix=1
+        - id: cdb-master-data-engine
+          uri: lb://cdb-master-data-engine
+          predicates:
+            - Path=/cdb-master-data-engine/**
+          filters:
+            - StripPrefix=1
+
+cdb:
+  gateway:
+    security:
+      rate-limiting:
+        enabled: ${CDB_GATEWAY_RATE_LIMITING_ENABLED:true}
+        requests-per-second: ${CDB_GATEWAY_RATE_LIMIT:100}
+
+
+logging:
+  level:
+    root: ${CDB_GATEWAY_ROOT_LOG_LEVEL:INFO}
+  pattern:
+    console: ${CDB_GATEWAY_LOG_PATTERN:%d{yyyy-MM-dd HH:mm:ss} - %msg%n}
+    file: ${CDB_GATEWAY_LOG_FILE_PATTERN:%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n}
+  file:
+    name: ${CDB_GATEWAY_LOG_FILE:cdb-logs/cdb-api-gateway/cdb-api-gateway.log}
+  logback:
+    rollingpolicy:
+      max-file-size: ${CDB_GATEWAY_LOG_MAX_FILE_SIZE:10MB}
+      max-history: ${CDB_GATEWAY_LOG_MAX_HISTORY:30}
+      total-size-cap: ${CDB_GATEWAY_LOG_TOTAL_SIZE_CAP:1GB}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'

@@ -1,0 +1,40 @@
+server:
+  port: ${CDB_AUTH_REGISTRY_PORT:8083}
+
+spring:
+  application:
+    name: ${CDB_AUTH_REGISTRY_NAME:cdb-auth-registry}
+
+  datasource:
+    url: ${CDB_AUTH_REGISTRY_DB_URL:${CDB_DB_URL:jdbc:mysql://${CDB_DB_HOST:localhost}:${CDB_DB_PORT:3306}/cdb_auth_registry_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}}
+    username: ${CDB_AUTH_REGISTRY_DB_USERNAME:${CDB_DB_USERNAME:root}}
+    password: ${CDB_AUTH_REGISTRY_DB_PASSWORD:${CDB_DB_PASSWORD:root}}
+    driver-class-name: ${CDB_AUTH_REGISTRY_DB_DRIVER:${CDB_DB_DRIVER:com.mysql.cj.jdbc.Driver}}
+  
+  jpa:
+    hibernate:
+      ddl-auto: ${CDB_AUTH_REGISTRY_JPA_DDL_AUTO:none}
+
+logging:
+  level:
+    root: ${CDB_AUTH_REGISTRY_ROOT_LOG_LEVEL:INFO}
+  pattern:
+    console: ${CDB_AUTH_REGISTRY_LOG_PATTERN:%d{yyyy-MM-dd HH:mm:ss} - %msg%n}
+    file: ${CDB_AUTH_REGISTRY_LOG_FILE_PATTERN:%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n}
+  file:
+    name: ${CDB_AUTH_REGISTRY_LOG_FILE:cdb-logs/cdb-auth-registry/cdb-auth-registry.log}
+  logback:
+    rollingpolicy:
+      max-file-size: ${CDB_AUTH_REGISTRY_LOG_MAX_FILE_SIZE:10MB}
+      max-history: ${CDB_AUTH_REGISTRY_LOG_MAX_HISTORY:30}
+      total-size-cap: ${CDB_AUTH_REGISTRY_LOG_TOTAL_SIZE_CAP:1GB}
+
+cdb:
+  auth:
+    jwt:
+      access-ttl: ${CDB_AUTH_JWT_ACCESS_TTL:86400}
+      refresh-ttl: ${CDB_AUTH_JWT_REFRESH_TTL:864000}
+    oauth2:
+      access-ttl: ${CDB_AUTH_OAUTH2_ACCESS_TTL:86400}
+
+

@@ -1,0 +1,45 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+node_modules
+package-lock.json
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+.mvn
+dist
+.flattened-pom.xml
+api-registry-ui/**
+/cdb-deployment/src/main/resources/docker/frontend/api-registry-ui/
+/cdb-deployment/src/main/resources/docker/frontend/provider-registry-ui/
+
+
+# Repository-scoped Maven cache
+.m2/
+*.log

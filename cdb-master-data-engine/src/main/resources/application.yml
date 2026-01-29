@@ -1,0 +1,32 @@
+server:
+  port: ${CDB_MASTER_DATA_ENGINE_PORT:8084}
+
+spring:
+  application:
+    name: ${CDB_MASTER_DATA_ENGINE_NAME:cdb-master-data-engine}
+  
+  datasource:
+    url: ${CDB_MASTER_DATA_ENGINE_DB_URL:${CDB_DB_URL:jdbc:mysql://${CDB_DB_HOST:localhost}:${CDB_DB_PORT:3306}/cdb_master_data_engine_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}}
+    username: ${CDB_MASTER_DATA_ENGINE_DB_USERNAME:${CDB_DB_USERNAME:root}}
+    password: ${CDB_MASTER_DATA_ENGINE_DB_PASSWORD:${CDB_DB_PASSWORD:root}}
+    driver-class-name: ${CDB_MASTER_DATA_ENGINE_DB_DRIVER:${CDB_DB_DRIVER:com.mysql.cj.jdbc.Driver}}
+  
+  jpa:
+    hibernate:
+      ddl-auto: ${CDB_MASTER_DATA_ENGINE_JPA_DDL_AUTO:none}
+    show-sql: ${CDB_MASTER_DATA_ENGINE_JPA_SHOW_SQL:false}
+
+
+logging:
+  level:
+    root: ${CDB_MASTER_DATA_ENGINE_ROOT_LOG_LEVEL:INFO}
+  pattern:
+    console: ${CDB_MASTER_DATA_LOG_PATTERN:%d{yyyy-MM-dd HH:mm:ss} - %msg%n}
+    file: ${CDB_MASTER_DATA_LOG_FILE_PATTERN:%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n}
+  file:
+    name: ${CDB_MASTER_DATA_LOG_FILE:cdb-logs/cdb-master-data-engine/cdb-master-data-engine.log}
+  logback:
+    rollingpolicy:
+      max-file-size: ${CDB_MASTER_DATA_LOG_MAX_FILE_SIZE:10MB}
+      max-history: ${CDB_MASTER_DATA_LOG_MAX_HISTORY:30}
+      total-size-cap: ${CDB_MASTER_DATA_LOG_TOTAL_SIZE_CAP:1GB}

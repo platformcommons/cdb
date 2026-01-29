@@ -1,0 +1,17 @@
+[
+  {
+    "title": "Getting started with API Registry",
+    "detail": "Commons Digital Backbone (CDB) SDK Technical Documentation",
+    "contentRef": "cdb_technical_docs.md"
+  },
+  {
+    "title": "Publishing your first API",
+    "detail": "Learn how to define metadata, upload an OpenAPI spec, and publish.",
+    "contentRef": "publishing-api.md"
+  },
+  {
+    "title": "Consuming APIs securely",
+    "detail": "Best practices for authentication, environments, and error handling.",
+    "contentRef": "consuming-apis.md"
+  }
+]

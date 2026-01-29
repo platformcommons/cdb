@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CDB Provider Registry</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- Early redirect to the configured base path to avoid React Router/Vite base URL warning -->
+    <script type="module">
+      const base = (import.meta.env.BASE_URL || '/');
+      // Normalize to ensure trailing slash for comparison
+      const normalizedBase = base.endsWith('/') ? base : base + '/';
+      if (normalizedBase !== '/' && !location.pathname.startsWith(normalizedBase)) {
+        const targetPath = normalizedBase.replace(/\/$/, '') + location.pathname;
+        const targetUrl = targetPath + location.search + location.hash;
+        location.replace(targetUrl);
+      }
+    </script>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

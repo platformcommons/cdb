@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - CDB Platform</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .signup-container { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        .logo { text-align: center; margin-bottom: 2rem; }
+        .logo h1 { color: #333; font-size: 2rem; font-weight: 300; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500; }
+        .form-group input { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem; }
+        .btn { width: 100%; padding: 0.75rem; background: #667eea; color: white; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; margin-bottom: 0.5rem; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .error { color: #dc3545; text-align: center; margin-bottom: 1rem; padding: 0.5rem; background: #f8d7da; border-radius: 5px; }
+        .success { color: #28a745; text-align: center; margin-bottom: 1rem; padding: 0.5rem; background: #d4edda; border-radius: 5px; }
+        .back-link { text-align: center; margin-top: 1rem; }
+        .back-link a { color: #667eea; text-decoration: none; }
+        .otp-section { display: none; }
+    </style>
+</head>
+<body>
+    <div class="signup-container">
+        <div class="logo">
+            <h1>CDB Platform</h1>
+        </div>
+        
+        <h2 style="text-align: center; margin-bottom: 1rem;">Sign Up</h2>
+        
+        <div th:if="${error}" class="error" th:text="${error}"></div>
+        <div th:if="${message}" class="success" th:text="${message}"></div>
+
+        <!-- Step 1: Email verification -->
+        <div id="email-section">
+            <form id="email-form">
+                <!-- Hidden fields to preserve OAuth2 parameters -->
+                <input type="hidden" id="clientId" th:value="${client_id}">
+                <input type="hidden" id="redirectUri" th:value="${redirect_uri}">
+                <input type="hidden" id="state" th:value="${state}">
+                
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <button type="submit" class="btn">Send OTP</button>
+            </form>
+        </div>
+
+        <!-- Step 2: OTP verification and registration -->
+        <div id="otp-section" class="otp-section">
+            <form id="registration-form">
+                <div class="form-group">
+                    <label for="emailDisplay">Email Address</label>
+                    <input type="email" id="emailDisplay" disabled>
+                </div>
+                
+                <div class="form-group">
+                    <label for="otp">Enter OTP</label>
+                    <input type="text" id="otp" name="otp" required maxlength="6">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fullName">Full Name</label>
+                    <input type="text" id="fullName" name="fullName" required>
+                </div>
+                
+                <button type="submit" class="btn">Complete Registration</button>
+            </form>
+        </div>
+
+        <div class="back-link">
+            <a href="#" onclick="goBackToLogin()">Back to Login</a>
+        </div>
+    </div>
+
+    <script>
+        let otpKey = '';
+        let userEmail = '';
+        
+        document.getElementById('email-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            
+            try {
+                const response = await fetch('/api/v1/otp/initiate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    otpKey = data.key;
+                    userEmail = email;
+                    document.getElementById('emailDisplay').value = email;
+                    document.getElementById('email-section').style.display = 'none';
+                    document.getElementById('otp-section').style.display = 'block';
+                } else {
+                    alert('Failed to send OTP');
+                }
+            } catch (error) {
+                alert('Error sending OTP');
+            }
+        });
+        
+        document.getElementById('registration-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const otp = document.getElementById('otp').value;
+            const password = document.getElementById('password').value;
+            const fullName = document.getElementById('fullName').value;
+            try {
+                const response = await fetch('/api/v1/users/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        otpKey: otpKey,
+                        otp: otp,
+                        email: userEmail,
+                        username: fullName,
+                        password: password
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Registration successful! Redirecting...');
+                    
+                    // Get redirect_uri from hidden form fields
+                    const redirectUri = document.getElementById('redirectUri').value;
+                    const clientId = document.getElementById('clientId').value;
+                    const state = document.getElementById('state').value;
+                    
+                    if (redirectUri && redirectUri.trim() !== '') {
+                        // Construct redirect URL with success parameter
+                        let finalRedirect = redirectUri;
+                        const separator = redirectUri.includes('?') ? '&' : '?';
+                        finalRedirect += separator + 'signup=success';
+                        
+                        if (state && state.trim() !== '') {
+                            finalRedirect += '&state=' + encodeURIComponent(state);
+                        }
+                        
+                        window.location.href = finalRedirect;
+                    } else {
+                        // Fallback to login page with preserved parameters
+                        let loginUrl = '/login';
+                        const params = new URLSearchParams();
+                        if (clientId && clientId.trim() !== '') params.append('client_id', clientId);
+                        if (redirectUri && redirectUri.trim() !== '') params.append('redirect_uri', redirectUri);
+                        if (state && state.trim() !== '') params.append('state', state);
+                        
+                        if (params.toString()) {
+                            loginUrl += '?' + params.toString();
+                        }
+                        
+                        window.location.href = loginUrl;
+                    }
+                } else {
+                    const error = await response.text();
+                    alert('Registration failed: ' + error);
+                }
+            } catch (error) {
+                alert('Error during registration: ' + error.message);
+            }
+        });
+        
+        function goBackToLogin() {
+            const clientId = document.getElementById('clientId').value;
+            const redirectUri = document.getElementById('redirectUri').value;
+            const state = document.getElementById('state').value;
+            
+            let loginUrl = '/login';
+            const params = new URLSearchParams();
+            if (clientId && clientId.trim() !== '') params.append('client_id', clientId);
+            if (redirectUri && redirectUri.trim() !== '') params.append('redirect_uri', redirectUri);
+            if (state && state.trim() !== '') params.append('state', state);
+            
+            if (params.toString()) {
+                loginUrl += '?' + params.toString();
+            }
+            
+            window.location.href = loginUrl;
+        }
+    </script>
+</body>
+</html>
