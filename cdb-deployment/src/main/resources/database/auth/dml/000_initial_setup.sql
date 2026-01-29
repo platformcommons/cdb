@@ -7,7 +7,6 @@ INSERT INTO `cdb_auth_registry_db`.`role_master` (`id`, `created_at`, `is_active
 
 
 -- Default user with bcrypt hashed password (round 12)
--- Password: admin123
 
 INSERT INTO `cdb_auth_registry_db`.`users`
 (`id`, `username`, `email`, `password_hash`, `enabled`, `mfa_enabled`, `created_at`,`updated_at`)
