@@ -1,0 +1,59 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(mvn:*)",
+      "Bash(npm:*)",
+      "Bash(ng:*)",
+      "Bash(docker:*)",
+      "Bash(docker-compose:*)",
+      "Bash(java:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(echo:*)",
+      "Bash(curl:*)",
+      "Bash(chmod:*)",
+      "Bash(rm:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(DROP DATABASE:*)",
+      "Bash(DROP TABLE:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[CDB] File modified: checking for Java files...' && if echo \"$CLAUDE_TOOL_RESULT\" | grep -q '\\.java$'; then echo '[CDB] Java file changed — run: mvn -DskipTests compile to verify'; fi"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[CDB Multi-Agent] Session complete. Verticals active: Angular | Spring Boot+MySQL | ETL/Reporting'"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "CDB_DB_HOST": "localhost",
+    "CDB_DB_PORT": "3306",
+    "CDB_DB_USERNAME": "root",
+    "CDB_AGENT_LOG_LEVEL": "INFO"
+  },
+  "includeCoAuthoredBy": true
+}
